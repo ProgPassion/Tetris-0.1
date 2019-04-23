@@ -1,0 +1,622 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Tetris</title>
+		<style>
+			body {
+				background-image: url('image.jpg');
+			}
+			h1.game_tlt {
+				font-family: Consolas;
+				color: #fff;
+				font-size: 44px;
+			}
+			div.wrap{
+				width: 500px;
+				height: 608px;
+				margin: 40px auto;
+				padding: 5px;
+				background-color: #aaa;
+			}
+			.field {
+				position: relative;
+				width:60%;
+				height: 600px;
+				float: left;
+				background-color: #888;
+				border: 4px solid #66B2FF
+			}
+			.score {
+				position: relative;
+				width:36%;
+				height: 608px;
+				float: right;
+				background-color: #bbb;
+			}
+			.obj, .obj-n {
+				position: absolute;
+				width: 27px;
+				height: 27px;
+				
+				
+				/*float : left;*/
+				margin-bottom: 1px;
+				margin-right: 1px;
+			}
+			.obj-n {
+				position: static;
+				
+				border: 1px solid #bbb;
+				float : left;
+				
+			}
+			.nextShape, .points {
+				overflow: hidden;
+			    padding: 20px;
+			}
+			.points {
+				margin-top: 20px;
+				padding: 10px;
+			}
+			
+			.points table {
+				width: 100%;
+			}
+
+
+			.ai, .jei, .el, .ou, .es, .ti, .zed {
+				border: 1px solid #fff;
+			}
+			.ai {
+				background-color: cyan;
+			}
+			.jei {
+				background-color: blue;
+			}
+			.el {
+				background-color: orange;
+			}
+			.ou {
+				background-color: yellow;
+			}
+			.es {
+				background-color: green;
+			}			
+			.ti {
+				background-color: purple;
+			}
+			.zed {
+				background-color: red;
+			}
+			
+		</style>
+	</head>
+	<body>
+		<h1 class="game_tlt">Tetris Ver 0.1</h1>
+		<div class="wrap">
+			<div class="field" id="field">
+			</div>
+			<div class="score">
+				<div class="nextShape">
+					<h2><center>NEXT</center></h2>
+					<div class="obj-n" id="next1"></div>
+					<div class="obj-n" id="next2"></div>
+					<div class="obj-n" id="next3"></div>
+					<div class="obj-n" id="next4"></div>
+					<div class="obj-n" id="next5"></div>
+					<div class="obj-n" id="next6"></div>
+					<div class="obj-n" id="next7"></div>
+					<div class="obj-n" id="next8"></div>
+				</div>
+				<div class="points">
+					<table>
+						<tr>
+						  <td>LEVEL</td>
+						  <td id="lvl_val"></td>
+						</tr>
+						<tr>
+							<td>SCORE</td>
+							<td id="scr_val"></td>
+						</tr>
+						<tr>
+							<td>LINES</td>
+							<td id="lin_val"></td>	
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+	</body>
+	<script>
+
+		var obj;
+		
+		var verticalUpdate;
+		var horizontalUpdate;
+		var numOfObj     = 0;
+		var rotatePosNum = 0;
+		var defaultSpeed = 500	
+		var GridsBusy    = [];
+		var newObj       = true; 
+		var collisionPro = false;
+		var nextShape    = getShape();
+
+		var level = 1;
+		var score = 0;
+		var lines = 0;
+
+		window.document.onkeydown = input;
+		
+		fieldGridValues();
+		obj = createNewObj();
+		gamePlay();		
+		
+		function fieldGridValues() {
+			for(i=0; i<20; i++) {
+				for(j=1; j<=10; j++){
+					index = 10 * i + j;  
+					GridsBusy[index-1] = false;
+				}
+			}
+
+			document.getElementById("lvl_val").innerHTML = level;
+			document.getElementById("scr_val").innerHTML = score;
+			document.getElementById("lin_val").innerHTML = lines; 
+		}
+
+		
+		function getShape() {
+			
+			shapeIndex = Math.floor((Math.random() * 7));
+			shapeArray = ["I", "J", "L", "O", "Z", "T", "S"];
+			shape      = shapeArray[shapeIndex];
+			
+			switch(shape) {
+				case "I":
+					shapeCellPos = [
+									[[0,90],[0,120],[0,150],[0,180]],
+									[[-60,150],[-30,150],[0,150],[30,150]],
+									[[0,90],[0,120],[0,150],[0,180]],
+									[[-60,150],[-30,150],[0,150],[30,150]],
+									"ai"
+								   ]; 					
+					break;
+				case "J":
+					shapeCellPos = [
+									[[0,120],[30,120],[60,120],[60,90]],
+									[[0,90],[30,90],[30,120],[30,150]],
+									[[0,90],[0,120],[30,90],[60,90]],
+									[[30,60],[30,90],[30,120],[60,120]],
+									"jei"
+								   ];
+					break;
+				case "L":
+					shapeCellPos = [
+									[[0,120],[30,120],[60,120],[60,150]],
+									[[30,90],[30,120],[30,150],[60,90]],
+									[[30,120],[30,150],[60,150],[90,150]],
+									[[30,180],[60,180],[60,150],[60,120]],
+									"el"
+								   ];
+					break;
+				case "O":
+					shapeCellPos = [ 
+					                [[0,120],[30,120],[0,150],[30,150]],
+									[[0,120],[30,120],[0,150],[30,150]],
+									[[0,120],[30,120],[0,150],[30,150]],
+									[[0,120],[30,120],[0,150],[30,150]],
+									"ou"
+								   ];
+					break;
+				case "Z":
+					shapeCellPos = [
+							        [[0,90],[0,120],[30,120],[30,150]],
+									[[-30,120],[0,120],[0,90],[30,90]],
+									[[0,90],[0,120],[30,120],[30,150]],
+									[[-30,120],[0,120],[0,90],[30,90]],
+									"zed"
+								   ];
+					break;
+				case "T":
+					shapeCellPos = [
+									[[0,120],[30,90],[30,120],[30,150]],
+									[[0,120],[30,120],[30,150],[60,120]],
+									[[30,90],[30,120],[30,150],[60,120]],
+									[[0,120],[30,120],[30,90],[60,120]],
+									"ti"
+								   ];
+					break;
+				case "S":
+					shapeCellPos = [
+									[[0,120],[0,150],[30,120],[30,90]],
+									[[-30,120],[0,120],[0,150],[30,150]],
+									[[0,120],[0,150],[30,120],[30,90]],
+									[[-30,120],[0,120],[0,150],[30,150]],
+									"es"
+								   ];
+					break;
+				default:
+					break;
+			}
+			return shapeCellPos;
+		}
+
+
+		function input(letter) {
+			switch(letter.keyCode) {
+				case 38:  //up arrow --->  Rotate Object
+					
+		
+						if(rotatePosNum < 3 && !checkForOutterEdges(rotatePosNum + 1))
+							rotatePosNum++;
+						else if(rotatePosNum == 3 && !checkForOutterEdges(0))
+							rotatePosNum = 0;
+						//updatePosition();
+					
+					break;
+				case 37:  //left arrow
+					
+					horizontalUpdate = -30;
+					verticalUpdate   = 0;
+
+					for(i = 0; i < 4; i++) {
+						topPos  = obj[rotatePosNum][i][0];
+						leftPos = obj[rotatePosNum][i][1];
+						grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+						if(leftPos <= 0 || Array.isArray(GridsBusy[grid-2])){
+							
+							horizontalUpdate = 0;
+							break;
+						}
+					} 
+					
+					updatePosition();
+					break;
+				case 39:  //right arrow
+ 					
+					horizontalUpdate = 30;
+					verticalUpdate   = 0;
+
+					for(i = 0; i < 4; i++) {
+						topPos  = obj[rotatePosNum][i][0];
+						leftPos = obj[rotatePosNum][i][1];
+						grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+						if(leftPos >= 270 || Array.isArray(GridsBusy[grid])){
+							
+							horizontalUpdate = 0;
+							break;
+						}
+					}
+				
+					updatePosition();
+					break;
+				case 40:
+					//down arrow
+
+					for(i = 0; i < 4; i++) {
+						topPos  = obj[rotatePosNum][i][0];
+						leftPos = obj[rotatePosNum][i][1];
+						grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+						if(topPos >= 570 || Array.isArray(GridsBusy[grid + 9])){
+							
+							verticalUpdate = 0;
+							break;
+						}
+					}
+					
+					updatePosition();
+					break;
+				default:
+					break;
+			}
+		}
+		
+		function checkCollision() {
+			
+			for(i = 0; i < 4; i++) {
+				topPos  = obj[rotatePosNum][i][0];
+				leftPos = obj[rotatePosNum][i][1];
+				
+				grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+				underGrid = grid + 10;
+
+				if(Array.isArray(GridsBusy[underGrid - 1]) || topPos === 570)
+					return true;
+			}
+			return false;
+		}
+		
+		function checkForOutterEdges(rotateNum) {
+			console.log(rotateNum);
+			for(i = 0; i < 4; i++) {
+				leftPos = obj[rotateNum][i][1];
+				topPos  = obj[rotateNum][i][0];
+				grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+				if(leftPos < 0 || leftPos > 270 || Array.isArray(GridsBusy[grid + 9])){
+					console.log("true");
+					return true;
+				}
+				console.log("false");
+				console.log("left: " + leftPos);
+				console.log("top: " + topPos);		
+			}
+			
+			return false;
+		}
+		
+
+		function createNewObj() {
+			
+			newObj       = false;
+			rotatePosNum = 0;
+			CurrentShape = nextShape;
+			nextShape = getShape();
+			updateNextShape();
+
+			verticalUpdate   = 0;
+			horizontalUpdate = 0;
+			objShapeColor    = CurrentShape[4];
+			
+			for(i=0; i<4; i++){
+				numOfObj++;
+				objId   = "num" + numOfObj; 
+				topPos  = CurrentShape[0][i][0];
+				leftPos = CurrentShape[0][i][1];
+
+				document.getElementById("field").innerHTML += '<div class="obj ' + objShapeColor + '"  id="' + objId + '"></div>';
+				document.getElementById(objId).style.top  = topPos  + "px";
+				document.getElementById(objId).style.left = leftPos + "px";
+				document.getElementById(objId).style.display = "inline-block";
+
+				CurrentShape[0][i][2] = objId;
+				CurrentShape[1][i][2] = objId;
+				CurrentShape[2][i][2] = objId;
+				CurrentShape[3][i][2] = objId;
+			}
+			
+			return CurrentShape;
+		}
+
+		function updateNextShape() {
+
+			cleanClasses();
+			shape = nextShape[4];
+			switch(shape) {
+
+				case "ai":
+					var element1 = document.getElementById("next5");
+					var element2 = document.getElementById("next6");
+					var element3 = document.getElementById("next7");
+					var element4 = document.getElementById("next8");
+
+					element1.classList.add("ai");
+					element2.classList.add("ai");
+					element3.classList.add("ai");
+					element4.classList.add("ai");
+					break;
+				case "jei":
+					var element1 = document.getElementById("next2");
+					var element2 = document.getElementById("next6");
+					var element3 = document.getElementById("next7");
+					var element4 = document.getElementById("next8");
+
+					element1.classList.add("jei");
+					element2.classList.add("jei");
+					element3.classList.add("jei");
+					element4.classList.add("jei");
+					break;
+				case "el":
+					var element1 = document.getElementById("next2");
+					var element2 = document.getElementById("next3");
+					var element3 = document.getElementById("next4");
+					var element4 = document.getElementById("next6");
+
+					element1.classList.add("el");
+					element2.classList.add("el");
+					element3.classList.add("el");
+					element4.classList.add("el");
+					break;
+				case "ou":
+					var element1 = document.getElementById("next2");
+					var element2 = document.getElementById("next3");
+					var element3 = document.getElementById("next6");
+					var element4 = document.getElementById("next7");
+
+					element1.classList.add("ou");
+					element2.classList.add("ou");
+					element3.classList.add("ou");
+					element4.classList.add("ou");
+					break;
+				case "zed":
+					var element1 = document.getElementById("next2");
+					var element2 = document.getElementById("next3");
+					var element3 = document.getElementById("next7");
+					var element4 = document.getElementById("next8");
+
+					element1.classList.add("zed");
+					element2.classList.add("zed");
+					element3.classList.add("zed");
+					element4.classList.add("zed");
+					break;
+				case "ti":
+					var element1 = document.getElementById("next2");
+					var element2 = document.getElementById("next3");
+					var element3 = document.getElementById("next4");
+					var element4 = document.getElementById("next7");
+
+					element1.classList.add("ti");
+					element2.classList.add("ti");
+					element3.classList.add("ti");
+					element4.classList.add("ti");
+					break;
+				case "es":
+					var element1 = document.getElementById("next3");
+					var element2 = document.getElementById("next4");
+					var element3 = document.getElementById("next6");
+					var element4 = document.getElementById("next7");
+
+					element1.classList.add("es");
+					element2.classList.add("es");
+					element3.classList.add("es");
+					element4.classList.add("es");
+					break;
+
+
+
+			}	
+		}
+		
+		function cleanClasses() {
+
+			for(i=1; i<=8; i++) {
+				var n_id = "next" + i; 
+				document.getElementById(n_id).removeAttribute("class");
+				document.getElementById(n_id).classList.add("obj-n");
+			}
+		}
+
+		function updatePosition() {
+		
+			for(j = 0; j < 4; j++) {
+				for(i = 0; i < 4; i++) {
+					topPos  = obj[j][i][0];
+					leftPos = obj[j][i][1];
+					cell_id = obj[j][i][2];
+						
+					topPos  += verticalUpdate;
+					leftPos += horizontalUpdate;
+						
+					if (j === rotatePosNum) {
+						document.getElementById(cell_id).style.top  = topPos  + "px";
+						document.getElementById(cell_id).style.left = leftPos + "px";
+						if(topPos < 0)
+							document.getElementById(cell_id).style.display = "none";
+						else
+							document.getElementById(cell_id).style.display = "inline-block";
+					}
+					
+					obj[j][i][0] = topPos;
+					obj[j][i][1] = leftPos;
+				}
+			}
+			horizontalUpdate = 0;
+			verticalUpdate   = 30;
+		}
+		
+	function checkForRowComplet() {
+			
+			rowsToDelIndex = [];
+			
+			for(i = GridsBusy.length - 1; i >= 0; i -= 10) {
+				rowToDelete = true;
+				rowNum = i;
+				
+				for(j = rowNum - 9; j <= rowNum; j++) {	
+					if(GridsBusy[j] === false) {
+						rowToDelete = false;
+						break;
+					}
+				}
+                
+				if(rowToDelete){
+					rowsToDelIndex.push(rowNum - 9);
+				}
+			}
+			updateField(rowsToDelIndex);	
+		}
+		
+		function updateField(rowsToDelIndex) {
+
+			for(i = 0; i < rowsToDelIndex.length; i++) {
+				score += 100;
+				lines += 1;
+
+				index      = rowsToDelIndex[i];
+				firstIndex = index + 10 * i;
+				lastIndex  = index + 10 * (i + 1);
+
+				delPart = GridsBusy.slice(firstIndex, lastIndex);
+				
+				for(j = 0; j < 10; j++) {
+					
+					cell_id  = delPart[j][1];
+					var cell = document.getElementById(cell_id);
+					cell.parentNode.removeChild(cell);
+					GridsBusy[firstIndex + j] = false;
+				}
+
+				for(j = firstIndex; j > 0; j -= 10) {
+					for(k = j; k < j + 10; k++) {
+						thisIndex = k - 10;
+
+						if(Array.isArray(GridsBusy[thisIndex])){
+							cell_id = GridsBusy[thisIndex][1];
+							topVal  = document.getElementById(cell_id).style.top;
+							topVal  = topVal.substring(0, topVal.length-2);
+							topVal  = Number(topVal) + 30;
+							document.getElementById(cell_id).style.top = topVal + "px";
+						}
+
+						tmpVal    = GridsBusy[thisIndex];
+						GridsBusy[thisIndex] = GridsBusy[k];
+						GridsBusy[k] = tmpVal;
+					}
+				}
+			}
+
+			if(score >= level * 1000){
+				level++;
+				defaultSpeed -= 50;
+			}
+
+			document.getElementById("lvl_val").innerHTML = level;
+			document.getElementById("scr_val").innerHTML = score;
+			document.getElementById("lin_val").innerHTML = lines;
+		}
+		
+		function defaultMove() {
+			 
+			if(!checkCollision()){
+				updatePosition();
+			}
+			else {
+				window.document.onkeydown = false;
+				collisionPro = true;
+			}
+		}
+
+		function gameOver() {
+
+			for(i=0; i<10; i++) {
+				if(Array.isArray(GridsBusy[i])){
+					return true;
+				}
+			}
+			return false;
+		}
+
+		function gamePlay() {
+
+			if(gameOver()){
+				alert("Game Over");
+				return;
+			}
+
+			if(collisionPro){
+				for(i = 0; i < 4; i++) {
+					topPos  = obj[rotatePosNum][i][0];
+					leftPos = obj[rotatePosNum][i][1];
+					grid = ((topPos + 30) / 30 - 1) * 10 + ((leftPos + 30) / 30);
+					
+					GridsBusy[grid-1] = [true,obj[rotatePosNum][i][2]];
+				}
+				checkForRowComplet();
+				obj = createNewObj();
+				collisionPro = false;
+				window.document.onkeydown = input;
+			}
+			defaultMove();
+		setTimeout(gamePlay, defaultSpeed);	
+		}
+	</script>
+</html>
